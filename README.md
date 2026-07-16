@@ -8,13 +8,14 @@ and low-priority tasks are smaller teal bubbles.
 
 - Add, edit, complete, restore, and delete tasks
 - Secure sign-up, sign-in, session management, and account profiles with Clerk
-- Separate local task storage for each signed-in account
+- Private cloud task storage for each signed-in account with Neon Postgres
+- Automatic one-time import of existing browser tasks
 - Optional descriptions and due dates
 - Collision-aware floating bubble physics with Framer Motion transitions
 - Filters for active priorities and completed tasks
 - Total, active, completed, and high-priority dashboard counts
 - Light and dark themes
-- Local storage persistence (no account or database required)
+- Cross-device synchronization with an offline browser cache
 - Keyboard-accessible controls, task dialogs, and reduced-motion support
 - Responsive layouts for desktop, tablet, and mobile
 
@@ -28,11 +29,14 @@ and low-priority tasks are smaller teal bubbles.
 ### Start the app
 
 Create `.env.local` from `.env.example`, then add your Clerk publishable and
-secret keys. If the Vercel Clerk Marketplace integration is connected, use
-`vercel env pull .env.local` to sync them automatically.
+secret keys plus a Neon `DATABASE_URL`. If the Vercel Clerk and Neon Marketplace
+integrations are connected, use `vercel env pull .env.local` to sync them
+automatically.
 
 ```bash
 pnpm install
+pnpm db:generate
+pnpm db:migrate
 pnpm dev
 ```
 
@@ -50,9 +54,9 @@ pnpm test
 The included `vercel.json` uses the standard Next.js production build while
 the default scripts remain compatible with the existing Sites setup.
 
-Before deploying, connect the official Clerk integration from the Vercel
-Marketplace. It automatically adds `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and
-`CLERK_SECRET_KEY` to the project.
+Before deploying, connect the official Clerk and Neon integrations from the
+Vercel Marketplace. They add the authentication keys and `DATABASE_URL` to the
+project. Apply database migrations once before the first production deploy.
 
 ```bash
 pnpm dlx vercel
@@ -64,12 +68,15 @@ publishes the production deployment.
 
 ## Project structure
 
-- `app/TaskBoard.tsx` owns task state, filtering, theme, and local persistence.
+- `app/TaskBoard.tsx` owns optimistic task state, filtering, theme, and cloud sync.
+- `app/api/tasks/route.ts` provides authenticated task CRUD and account migration.
+- `db/schema.ts` defines the account-scoped Postgres tables.
 - `app/components/TaskComposer.tsx` provides the accessible add-task form.
 - `app/components/BubbleField.tsx` renders bubbles and runs the collision physics.
 - `app/components/TaskDialog.tsx` handles editing and task actions.
 - `app/components/Dashboard.tsx` renders summary counts and filters.
 - `app/globals.css` contains the responsive visual system and animations.
 
-Tasks are stored under `orbit-tasks-v1` in the browser's local storage. Clearing
-site data resets the board to the starter tasks.
+Tasks are stored in Neon Postgres and every query is scoped to the authenticated
+Clerk user. The `orbit-tasks-v1` browser entry remains as a cache and migration
+source; theme preference stays device-local.

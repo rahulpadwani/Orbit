@@ -12,6 +12,40 @@ import { Priority, Task, TaskFilter } from "./components/task-types";
 const STORAGE_KEY = "orbit-tasks-v1";
 const THEME_KEY = "orbit-theme";
 
+type SyncStatus = "loading" | "synced" | "offline";
+
+type TaskListResponse = {
+  tasks: Task[];
+  needsMigration?: boolean;
+};
+
+function storedTasks(value: string | null): Task[] | null {
+  if (value === null) return null;
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? (parsed as Task[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function taskRequest<T>(init?: RequestInit, url = "/api/tasks"): Promise<T> {
+  const response = await fetch(url, {
+    ...init,
+    headers: {
+      "content-type": "application/json",
+      ...init?.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(body?.error ?? "Cloud sync failed.");
+  }
+
+  return (response.status === 204 ? undefined : await response.json()) as T;
+}
+
 function dateInDays(days: number) {
   const date = new Date();
   date.setDate(date.getDate() + days);
@@ -68,6 +102,7 @@ export default function TaskBoard() {
   const [completingIds, setCompletingIds] = useState<Set<string>>(new Set());
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [hydrated, setHydrated] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>("loading");
   const [toast, setToast] = useState("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const userStorageKey = user ? `${STORAGE_KEY}:${user.id}` : null;
@@ -76,27 +111,58 @@ export default function TaskBoard() {
 
   useEffect(() => {
     if (!userStorageKey) return;
-    setHydrated(false);
-    setTasks([]);
+    let cancelled = false;
+
+    const savedTasks = storedTasks(window.localStorage.getItem(userStorageKey));
+    const legacyTasks = storedTasks(window.localStorage.getItem(STORAGE_KEY));
+    const tasksToMigrate = savedTasks ?? legacyTasks ?? starterTasks();
+    let nextTheme: "light" | "dark" = "light";
+
     try {
-      const savedTasks = window.localStorage.getItem(userStorageKey);
-      const legacyTasks = window.localStorage.getItem(STORAGE_KEY);
-      const tasksToLoad = savedTasks ?? legacyTasks;
-      setTasks(tasksToLoad ? JSON.parse(tasksToLoad) : starterTasks());
-      if (!savedTasks && legacyTasks) {
-        window.localStorage.setItem(userStorageKey, legacyTasks);
+      if (savedTasks === null && legacyTasks !== null) {
+        window.localStorage.setItem(userStorageKey, JSON.stringify(legacyTasks));
         window.localStorage.removeItem(STORAGE_KEY);
       }
       const savedTheme = window.localStorage.getItem(THEME_KEY);
       const preferredDark = window.matchMedia(
         "(prefers-color-scheme: dark)",
       ).matches;
-      setTheme(savedTheme === "dark" || (!savedTheme && preferredDark) ? "dark" : "light");
-    } catch {
-      setTasks(starterTasks());
-    } finally {
-      setHydrated(true);
+      nextTheme = savedTheme === "dark" || (!savedTheme && preferredDark) ? "dark" : "light";
+    } catch {}
+
+    async function loadCloudTasks() {
+      await Promise.resolve();
+      if (cancelled) return;
+      setTheme(nextTheme);
+
+      try {
+        let result = await taskRequest<TaskListResponse>({ cache: "no-store" });
+
+        if (result.needsMigration) {
+          result = await taskRequest<TaskListResponse>({
+            method: "POST",
+            body: JSON.stringify({ tasks: tasksToMigrate, initialize: true }),
+          });
+        }
+
+        if (!cancelled) {
+          setTasks(result.tasks);
+          setSyncStatus("synced");
+        }
+      } catch {
+        if (!cancelled) {
+          setTasks(tasksToMigrate);
+          setSyncStatus("offline");
+        }
+      } finally {
+        if (!cancelled) setHydrated(true);
+      }
     }
+
+    void loadCloudTasks();
+    return () => {
+      cancelled = true;
+    };
   }, [userStorageKey]);
 
   useEffect(() => {
@@ -143,53 +209,96 @@ export default function TaskBoard() {
       typeof crypto !== "undefined" && "randomUUID" in crypto
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    setTasks((current) => [
-      ...current,
-      {
-        ...input,
-        id,
-        completed: false,
-        createdAt: new Date().toISOString(),
-      },
-    ]);
+    const task: Task = {
+      ...input,
+      id,
+      completed: false,
+      createdAt: new Date().toISOString(),
+    };
+    setTasks((current) => [...current, task]);
     setFilter("all");
     notify("A new task joined your orbit.");
+    void taskRequest<{ task: Task }>({
+      method: "POST",
+      body: JSON.stringify({ task }),
+    })
+      .then(({ task: savedTask }) => {
+        setTasks((current) =>
+          current.map((item) => (item.id === savedTask.id ? savedTask : item)),
+        );
+        setSyncStatus("synced");
+      })
+      .catch(() => {
+        setTasks((current) => current.filter((item) => item.id !== task.id));
+        setSyncStatus("offline");
+        notify("That task could not be synced. Please try again.");
+      });
   }
 
   function saveTask(updatedTask: Task) {
+    const previousTask = tasks.find((task) => task.id === updatedTask.id);
     setTasks((current) =>
       current.map((task) => (task.id === updatedTask.id ? updatedTask : task)),
     );
     notify("Changes saved.");
+    void taskRequest<{ task: Task }>({
+      method: "PATCH",
+      body: JSON.stringify({ task: updatedTask }),
+    })
+      .then(({ task }) => {
+        setTasks((current) =>
+          current.map((item) => (item.id === task.id ? task : item)),
+        );
+        setSyncStatus("synced");
+      })
+      .catch(() => {
+        if (previousTask) {
+          setTasks((current) =>
+            current.map((item) => (item.id === previousTask.id ? previousTask : item)),
+          );
+        }
+        setSyncStatus("offline");
+        notify("Changes were not synced. Please try again.");
+      });
   }
 
   function toggleComplete(task: Task) {
     if (task.completed) {
+      const restoredTask = { ...task, completed: false, completedAt: undefined };
       setTasks((current) =>
         current.map((item) =>
-          item.id === task.id
-            ? { ...item, completed: false, completedAt: undefined }
-            : item,
+          item.id === task.id ? restoredTask : item,
         ),
       );
       setFilter("all");
       setSelectedId(null);
       notify("Task restored to your orbit.");
+      void taskRequest<{ task: Task }>({
+        method: "PATCH",
+        body: JSON.stringify({ task: restoredTask }),
+      })
+        .then(() => setSyncStatus("synced"))
+        .catch(() => {
+          setTasks((current) =>
+            current.map((item) => (item.id === task.id ? task : item)),
+          );
+          setSyncStatus("offline");
+          notify("The task could not be restored. Please try again.");
+        });
       return;
     }
 
     setSelectedId(null);
     setCompletingIds((current) => new Set(current).add(task.id));
     window.setTimeout(() => {
+      const completedTask: Task = {
+        ...task,
+        completed: true,
+        completedAt: new Date().toISOString(),
+      };
       setTasks((current) =>
         current.map((item) =>
-          item.id === task.id
-            ? {
-                ...item,
-                completed: true,
-                completedAt: new Date().toISOString(),
-              }
-            : item,
+          item.id === task.id ? completedTask : item,
         ),
       );
       setCompletingIds((current) => {
@@ -198,6 +307,18 @@ export default function TaskBoard() {
         return next;
       });
       notify("Beautifully done. Task completed!");
+      void taskRequest<{ task: Task }>({
+        method: "PATCH",
+        body: JSON.stringify({ task: completedTask }),
+      })
+        .then(() => setSyncStatus("synced"))
+        .catch(() => {
+          setTasks((current) =>
+            current.map((item) => (item.id === task.id ? task : item)),
+          );
+          setSyncStatus("offline");
+          notify("Completion was not synced. Please try again.");
+        });
     }, 760);
   }
 
@@ -205,6 +326,18 @@ export default function TaskBoard() {
     setTasks((current) => current.filter((item) => item.id !== task.id));
     setSelectedId(null);
     notify("Task removed.");
+    void taskRequest<void>(
+      { method: "DELETE" },
+      `/api/tasks?id=${encodeURIComponent(task.id)}`,
+    )
+      .then(() => setSyncStatus("synced"))
+      .catch(() => {
+        setTasks((current) =>
+          [...current, task].sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+        );
+        setSyncStatus("offline");
+        notify("The task could not be deleted. Please try again.");
+      });
   }
 
   function handleFilterChange(nextFilter: TaskFilter) {
@@ -238,7 +371,13 @@ export default function TaskBoard() {
           <div className="mobile-panel-label">
             <span>{activeCount} active tasks</span>
             <span aria-hidden="true">·</span>
-            <span>Stored on this device</span>
+            <span>
+              {syncStatus === "synced"
+                ? "Cloud synced"
+                : syncStatus === "loading"
+                  ? "Connecting"
+                  : "Sync unavailable"}
+            </span>
           </div>
 
           <TaskComposer onAdd={addTask} />
@@ -249,8 +388,14 @@ export default function TaskBoard() {
           />
 
           <p className="storage-note">
-            <span aria-hidden="true">◎</span>
-            {displayName}&apos;s tasks are saved privately on this device.
+            <span aria-hidden="true">
+              {syncStatus === "synced" ? "●" : syncStatus === "loading" ? "◌" : "!"}
+            </span>
+            {syncStatus === "synced"
+              ? `${displayName}'s tasks sync privately across devices.`
+              : syncStatus === "loading"
+                ? "Connecting to your private task cloud…"
+                : "Cloud sync is unavailable. Reconnect before making changes."}
           </p>
         </aside>
 
