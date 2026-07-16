@@ -7,6 +7,8 @@ and low-priority tasks are smaller teal bubbles.
 ## Features
 
 - Add, edit, complete, restore, and delete tasks
+- Secure sign-up, sign-in, session management, and account profiles with Clerk
+- Separate local task storage for each signed-in account
 - Optional descriptions and due dates
 - Collision-aware floating bubble physics with Framer Motion transitions
 - Filters for active priorities and completed tasks
@@ -24,6 +26,10 @@ and low-priority tasks are smaller teal bubbles.
 - pnpm 11 or newer
 
 ### Start the app
+
+Create `.env.local` from `.env.example`, then add your Clerk publishable and
+secret keys. If the Vercel Clerk Marketplace integration is connected, use
+`vercel env pull .env.local` to sync them automatically.
 
 ```bash
 pnpm install
@@ -43,6 +49,10 @@ pnpm test
 
 The included `vercel.json` uses the standard Next.js production build while
 the default scripts remain compatible with the existing Sites setup.
+
+Before deploying, connect the official Clerk integration from the Vercel
+Marketplace. It automatically adds `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and
+`CLERK_SECRET_KEY` to the project.
 
 ```bash
 pnpm dlx vercel

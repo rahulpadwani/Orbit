@@ -1,5 +1,6 @@
 "use client";
 
+import { UserButton, useUser } from "@clerk/nextjs";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BubbleField } from "./components/BubbleField";
@@ -60,6 +61,7 @@ function starterTasks(): Task[] {
 }
 
 export default function TaskBoard() {
+  const { user } = useUser();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filter, setFilter] = useState<TaskFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -68,11 +70,23 @@ export default function TaskBoard() {
   const [hydrated, setHydrated] = useState(false);
   const [toast, setToast] = useState("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const userStorageKey = user ? `${STORAGE_KEY}:${user.id}` : null;
+  const displayName =
+    user?.firstName ?? user?.primaryEmailAddress?.emailAddress.split("@")[0] ?? "you";
 
   useEffect(() => {
+    if (!userStorageKey) return;
+    setHydrated(false);
+    setTasks([]);
     try {
-      const savedTasks = window.localStorage.getItem(STORAGE_KEY);
-      setTasks(savedTasks ? JSON.parse(savedTasks) : starterTasks());
+      const savedTasks = window.localStorage.getItem(userStorageKey);
+      const legacyTasks = window.localStorage.getItem(STORAGE_KEY);
+      const tasksToLoad = savedTasks ?? legacyTasks;
+      setTasks(tasksToLoad ? JSON.parse(tasksToLoad) : starterTasks());
+      if (!savedTasks && legacyTasks) {
+        window.localStorage.setItem(userStorageKey, legacyTasks);
+        window.localStorage.removeItem(STORAGE_KEY);
+      }
       const savedTheme = window.localStorage.getItem(THEME_KEY);
       const preferredDark = window.matchMedia(
         "(prefers-color-scheme: dark)",
@@ -83,12 +97,12 @@ export default function TaskBoard() {
     } finally {
       setHydrated(true);
     }
-  }, []);
+  }, [userStorageKey]);
 
   useEffect(() => {
-    if (!hydrated) return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-  }, [hydrated, tasks]);
+    if (!hydrated || !userStorageKey) return;
+    window.localStorage.setItem(userStorageKey, JSON.stringify(tasks));
+  }, [hydrated, tasks, userStorageKey]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -236,7 +250,7 @@ export default function TaskBoard() {
 
           <p className="storage-note">
             <span aria-hidden="true">◎</span>
-            Your tasks are saved automatically on this device.
+            {displayName}&apos;s tasks are saved privately on this device.
           </p>
         </aside>
 
@@ -269,6 +283,20 @@ export default function TaskBoard() {
               >
                 <span aria-hidden="true">{theme === "light" ? "☾" : "☼"}</span>
               </motion.button>
+              <div className="account-chip">
+                <span>
+                  <small>Signed in as</small>
+                  {displayName}
+                </span>
+                <UserButton
+                  showName={false}
+                  appearance={{
+                    elements: {
+                      avatarBox: "orbit-user-avatar",
+                    },
+                  }}
+                />
+              </div>
             </div>
           </header>
 
@@ -316,4 +344,3 @@ export default function TaskBoard() {
 function capitalize(value: Priority) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
-

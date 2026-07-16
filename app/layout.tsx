@@ -1,3 +1,4 @@
+import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import "./globals.css";
 
@@ -20,7 +21,22 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body>{children}</body>
+      <body>
+        <ClerkProvider
+          signInFallbackRedirectUrl="/"
+          signUpFallbackRedirectUrl="/"
+          appearance={{
+            variables: {
+              colorPrimary: "#7358e8",
+              borderRadius: "0.9rem",
+              fontFamily:
+                'ui-rounded, "SF Pro Rounded", "Avenir Next", system-ui, sans-serif',
+            },
+          }}
+        >
+          {children}
+        </ClerkProvider>
+      </body>
     </html>
   );
 }

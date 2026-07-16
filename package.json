@@ -16,6 +16,7 @@
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.5.18",
     "drizzle-orm": "0.45.2",
     "framer-motion": "^12.42.2",
     "next": "16.2.6",
