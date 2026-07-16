@@ -68,19 +68,23 @@ body {
 
 button,
 input,
-textarea {
+textarea,
+select {
   font: inherit;
 }
 
 button,
 input,
-textarea {
+textarea,
+select {
   outline: none;
 }
 
 button:focus-visible,
 input:focus-visible,
-textarea:focus-visible {
+textarea:focus-visible,
+select:focus-visible,
+a:focus-visible {
   box-shadow: 0 0 0 3px var(--panel-solid), 0 0 0 6px var(--violet);
 }
 
@@ -214,11 +218,243 @@ button {
   font-weight: 650;
 }
 
+.team-switcher {
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--soft);
+}
+
+.team-switcher-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.team-switcher-heading .section-kicker {
+  margin-bottom: 4px;
+}
+
+.section-kicker-dot.team-dot {
+  background: var(--blue);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--blue) 12%, transparent);
+}
+
+.team-switcher h2,
+.orbital-card h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 830;
+  letter-spacing: -0.035em;
+}
+
+.team-create-toggle {
+  min-height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  background: var(--panel-solid);
+  color: var(--violet);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 820;
+}
+
+.workspace-list {
+  display: grid;
+  max-height: 185px;
+  gap: 5px;
+  margin-top: 11px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.workspace-list > button {
+  display: grid;
+  min-height: 45px;
+  grid-template-columns: 29px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  text-align: left;
+  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.workspace-list > button:hover,
+.workspace-list > button.active {
+  border-color: var(--line);
+  background: var(--panel-solid);
+  transform: translateX(2px);
+}
+
+.workspace-list > button.active {
+  color: var(--ink);
+  box-shadow: 0 7px 18px rgba(48, 38, 70, 0.06);
+}
+
+.workspace-icon {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  place-items: center;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--violet) 11%, transparent);
+  color: var(--violet);
+  font-size: 11px;
+}
+
+.workspace-icon.is-team {
+  background: color-mix(in srgb, var(--blue) 12%, transparent);
+  color: var(--blue);
+  font-size: 16px;
+}
+
+.workspace-copy {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.workspace-copy strong,
+.workspace-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-copy strong {
+  color: inherit;
+  font-size: 11px;
+  font-weight: 790;
+}
+
+.workspace-copy small {
+  color: var(--faint);
+  font-size: 8px;
+  font-weight: 650;
+}
+
+.workspace-count {
+  display: grid;
+  min-width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--violet) 9%, transparent);
+  color: var(--violet);
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.create-team-form {
+  overflow: hidden;
+}
+
+.create-team-form > label {
+  display: block;
+  margin: 11px 0 5px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.create-team-form > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+}
+
+.create-team-form input,
+.team-invite-block input {
+  min-width: 0;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--input);
+  color: var(--ink);
+  font-size: 10px;
+}
+
+.create-team-form button,
+.team-invite-block button {
+  border: 0;
+  border-radius: 10px;
+  background: var(--violet);
+  color: white;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.create-team-form button {
+  padding: 0 12px;
+}
+
+.create-team-form button:disabled,
+.team-invite-block button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+.team-invite-block {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.team-invite-block button {
+  min-height: 36px;
+  background: linear-gradient(135deg, #4d9fe6, #5d55dc);
+}
+
+.team-invite-block button span {
+  margin-right: 5px;
+}
+
+.team-error {
+  margin: 8px 2px 0;
+  color: var(--coral);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
 .composer {
   padding: 17px;
   border: 1px solid var(--line);
   border-radius: 21px;
   background: var(--soft);
+}
+
+.composer-target {
+  display: grid;
+  gap: 5px;
+  margin-top: 12px;
+}
+
+.composer-target > span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.composer-target select {
+  width: 100%;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--input);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .section-kicker {
@@ -459,6 +695,104 @@ button {
   opacity: 0.48;
 }
 
+.orbital-card {
+  position: relative;
+  display: grid;
+  min-height: 126px;
+  grid-template-columns: minmax(0, 1fr) 70px;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--violet) 20%, var(--line));
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 96% 20%, color-mix(in srgb, var(--violet) 17%, transparent), transparent 42%),
+    var(--soft);
+}
+
+.orbital-card::after {
+  position: absolute;
+  right: -20px;
+  bottom: -28px;
+  width: 100px;
+  height: 100px;
+  border: 1px solid color-mix(in srgb, var(--violet) 20%, transparent);
+  border-radius: 50%;
+  content: "";
+  pointer-events: none;
+}
+
+.orbital-copy {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.orbital-copy .section-kicker {
+  margin-bottom: 4px;
+}
+
+.section-kicker-dot.orbital-dot {
+  background: var(--violet);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--violet) 13%, transparent);
+}
+
+.orbital-copy p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.orbital-copy small {
+  display: block;
+  margin-top: 6px;
+  color: var(--faint);
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.orbital-mic {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  width: 62px;
+  height: 62px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  border-radius: 50%;
+  background: linear-gradient(145deg, #a28bf8, #6749d6 62%, #4d31bb);
+  box-shadow: 0 13px 30px rgba(83, 55, 183, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.5);
+  color: white;
+  cursor: pointer;
+  font-size: 22px;
+}
+
+.orbital-mic:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.4);
+  opacity: 0.64;
+}
+
+.orbital-rings {
+  position: absolute;
+  inset: -8px;
+  border: 1px solid color-mix(in srgb, var(--violet) 38%, transparent);
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.orbital-card.is-listening .orbital-rings {
+  animation: orbital-listen 1.25s ease-out infinite;
+}
+
+@keyframes orbital-listen {
+  0% { transform: scale(0.84); opacity: 0.7; }
+  100% { transform: scale(1.32); opacity: 0; }
+}
+
 .dashboard-block {
   display: grid;
   gap: 18px;
@@ -693,6 +1027,7 @@ button {
 }
 
 .theme-button,
+.presentation-button,
 .close-button {
   display: grid;
   flex: 0 0 auto;
@@ -710,6 +1045,59 @@ button {
   font-size: 19px;
   box-shadow: 0 8px 22px rgba(46, 34, 67, 0.08);
 }
+
+.presentation-button {
+  display: flex;
+  min-width: 88px;
+  height: 43px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 12px;
+  font-size: 10px;
+  font-weight: 820;
+}
+
+.presentation-button > span:first-child {
+  font-size: 17px;
+}
+
+.presentation-button:hover {
+  border-color: color-mix(in srgb, var(--blue) 45%, transparent);
+  color: var(--blue);
+}
+
+.presentation-label {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--mint) 12%, transparent);
+  color: var(--mint);
+  font-size: 9px;
+  font-weight: 820;
+  text-transform: uppercase;
+}
+
+.orbit-panel:fullscreen {
+  width: 100vw;
+  height: 100vh;
+  border: 0;
+  border-radius: 0;
+  background: var(--panel-solid);
+}
+
+.orbit-panel:fullscreen .orbit-header {
+  min-height: 118px;
+  padding-right: 34px;
+  padding-left: 38px;
+}
+
+.orbit-panel:fullscreen .bubble-field {
+  min-height: 0;
+}
+
+.orbit-panel:fullscreen .bubble-high { --bubble-size: clamp(174px, 13vw, 224px); }
+.orbit-panel:fullscreen .bubble-medium { --bubble-size: clamp(138px, 10vw, 174px); }
+.orbit-panel:fullscreen .bubble-low { --bubble-size: clamp(105px, 7.6vw, 132px); }
 
 .theme-button:hover {
   border-color: color-mix(in srgb, var(--violet) 40%, transparent);
@@ -1812,6 +2200,147 @@ button {
   font-size: 12px;
 }
 
+.join-page {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background:
+    radial-gradient(circle at 15% 15%, rgba(117, 88, 232, 0.18), transparent 32%),
+    radial-gradient(circle at 84% 78%, rgba(32, 165, 155, 0.14), transparent 31%),
+    linear-gradient(145deg, var(--page), var(--page-accent));
+}
+
+.join-shell {
+  width: min(620px, 100%);
+  padding: clamp(28px, 6vw, 56px);
+  border: 1px solid var(--line);
+  border-radius: 32px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(22px);
+}
+
+.join-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 18px;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.join-brand span {
+  color: var(--violet);
+  font-size: 24px;
+}
+
+.join-copy {
+  margin-top: 44px;
+}
+
+.join-kicker {
+  margin: 0 0 10px;
+  color: var(--violet);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.join-copy h1 {
+  max-width: 520px;
+  margin: 0;
+  font-size: clamp(35px, 7vw, 54px);
+  font-weight: 870;
+  letter-spacing: -0.06em;
+  line-height: 0.98;
+}
+
+.join-copy > p:last-child {
+  max-width: 470px;
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.join-actions,
+.join-result {
+  margin-top: 34px;
+}
+
+.join-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.join-actions button,
+.join-result a {
+  min-height: 46px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #7257e7, #573bd0);
+  box-shadow: 0 11px 24px rgba(95, 67, 204, 0.22);
+  color: white;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 820;
+}
+
+.join-actions .join-secondary {
+  border: 1px solid var(--line-strong);
+  background: var(--soft);
+  box-shadow: none;
+  color: var(--ink);
+}
+
+.join-result {
+  display: grid;
+  justify-items: start;
+  gap: 7px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--soft);
+}
+
+.join-orb {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--violet);
+  color: white;
+  font-weight: 900;
+}
+
+.join-joined .join-orb { background: var(--mint); }
+.join-error .join-orb { background: var(--coral); }
+
+.join-result p {
+  margin: 6px 0 0;
+  font-size: 14px;
+  font-weight: 780;
+}
+
+.join-result small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.join-result a {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 8px;
+  text-decoration: none;
+}
+
 @keyframes live-pulse {
   0%, 100% { transform: scale(0.9); opacity: 0.75; }
   50% { transform: scale(1.18); opacity: 1; }
@@ -1846,6 +2375,15 @@ button {
   }
 
   .priority-legend {
+    display: none;
+  }
+
+  .presentation-button {
+    min-width: 43px;
+    padding: 0;
+  }
+
+  .presentation-button > span:last-child {
     display: none;
   }
 
@@ -1887,7 +2425,8 @@ button {
 
   .brand-row,
   .mobile-panel-label,
-  .storage-note {
+  .storage-note,
+  .team-switcher {
     grid-column: 1 / -1;
   }
 
@@ -1938,6 +2477,10 @@ button {
   .auth-actions button {
     width: 100%;
   }
+
+  .workspace-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 680px) {
@@ -1949,6 +2492,10 @@ button {
     display: flex;
     padding: 17px;
     border-radius: 22px;
+  }
+
+  .workspace-list {
+    grid-template-columns: 1fr;
   }
 
   .mobile-panel-label {
@@ -2102,6 +2649,10 @@ button {
     gap: 8px;
   }
 
+  .presentation-label {
+    display: none;
+  }
+
   .account-chip {
     min-height: 39px;
     border-radius: 12px;
@@ -2110,6 +2661,29 @@ button {
   .orbit-user-avatar {
     width: 27px !important;
     height: 27px !important;
+  }
+
+  .join-page {
+    padding: 8px;
+  }
+
+  .join-shell {
+    min-height: calc(100dvh - 16px);
+    padding: 25px 20px;
+    border-radius: 24px;
+  }
+
+  .join-copy {
+    margin-top: 70px;
+  }
+
+  .join-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .join-actions button {
+    width: 100%;
   }
 }
 
@@ -2133,6 +2707,22 @@ button {
   .theme-button {
     width: 39px;
     height: 39px;
+  }
+
+  .presentation-button {
+    width: 39px;
+    min-width: 39px;
+    height: 39px;
+  }
+
+  .orbital-card {
+    grid-template-columns: minmax(0, 1fr) 58px;
+  }
+
+  .orbital-mic {
+    width: 54px;
+    height: 54px;
+    font-size: 19px;
   }
 
   .bubble-high { --bubble-size: 122px; }

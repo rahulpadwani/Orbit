@@ -2,17 +2,20 @@
 
 import { FormEvent, useState } from "react";
 import { motion } from "framer-motion";
-import { PRIORITIES, Priority, Task } from "./task-types";
+import { PRIORITIES, Priority, Task, Team } from "./task-types";
 
 type TaskComposerProps = {
   onAdd: (task: Omit<Task, "id" | "createdAt" | "completed">) => void;
+  teams: Team[];
+  defaultTeamId?: string;
 };
 
-export function TaskComposer({ onAdd }: TaskComposerProps) {
+export function TaskComposer({ onAdd, teams, defaultTeamId }: TaskComposerProps) {
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<Priority>("medium");
   const [description, setDescription] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [teamId, setTeamId] = useState(defaultTeamId ?? "");
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -24,6 +27,7 @@ export function TaskComposer({ onAdd }: TaskComposerProps) {
       priority,
       description: description.trim(),
       dueDate,
+      ...(teamId ? { teamId } : {}),
     });
     setTitle("");
     setDescription("");
@@ -54,6 +58,16 @@ export function TaskComposer({ onAdd }: TaskComposerProps) {
           {title.length}/72
         </span>
       </div>
+
+      <label className="composer-target">
+        <span>Save to</span>
+        <select value={teamId} onChange={(event) => setTeamId(event.target.value)}>
+          <option value="">My private space</option>
+          {teams.map((team) => (
+            <option key={team.id} value={team.id}>{team.name}</option>
+          ))}
+        </select>
+      </label>
 
       <fieldset className="priority-fieldset">
         <legend>Choose priority</legend>
@@ -110,4 +124,3 @@ export function TaskComposer({ onAdd }: TaskComposerProps) {
     </form>
   );
 }
-

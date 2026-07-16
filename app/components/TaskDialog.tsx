@@ -10,6 +10,7 @@ type TaskDialogProps = {
   onSave: (task: Task) => void;
   onToggleComplete: (task: Task) => void;
   onDelete: (task: Task) => void;
+  teamName?: string;
 };
 
 export function TaskDialog({
@@ -18,6 +19,7 @@ export function TaskDialog({
   onSave,
   onToggleComplete,
   onDelete,
+  teamName,
 }: TaskDialogProps) {
   const [title, setTitle] = useState(task.title);
   const [priority, setPriority] = useState<Priority>(task.priority);
@@ -159,6 +161,7 @@ export function TaskDialog({
           </div>
 
           <div className="task-meta">
+            <span>{teamName ? `Shared in ${teamName}` : "Private task"}</span>
             <span>Created {formatDate(task.createdAt)}</span>
             {task.completedAt && (
               <span>Completed {formatDate(task.completedAt)}</span>
@@ -201,4 +204,3 @@ function formatDate(value: string) {
     year: "numeric",
   }).format(new Date(value));
 }
-

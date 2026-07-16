@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, or, sql, type SQL } from "drizzle-orm";
 import { getDb } from "../../../db";
-import { orbitUsers, tasks } from "../../../db/schema";
+import { orbitUsers, teamMembers, tasks } from "../../../db/schema";
 import type { Task } from "../../components/task-types";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +25,7 @@ function parseTask(value: unknown): Task | null {
   if (!value || typeof value !== "object") return null;
   const candidate = value as Partial<Task>;
   const completedAt = candidate.completedAt;
+  const teamId = candidate.teamId;
 
   if (
     typeof candidate.id !== "string" ||
@@ -40,6 +41,8 @@ function parseTask(value: unknown): Task | null {
     typeof candidate.completed !== "boolean" ||
     typeof candidate.createdAt !== "string" ||
     !isTimestamp(candidate.createdAt) ||
+    (teamId !== undefined &&
+      (typeof teamId !== "string" || !/^[a-zA-Z0-9-]{1,80}$/.test(teamId))) ||
     (completedAt !== undefined &&
       (typeof completedAt !== "string" || !isTimestamp(completedAt)))
   ) {
@@ -48,6 +51,7 @@ function parseTask(value: unknown): Task | null {
 
   return {
     id: candidate.id,
+    ...(teamId ? { teamId } : {}),
     title: candidate.title.trim(),
     description: candidate.description.trim(),
     dueDate: candidate.dueDate,
@@ -62,6 +66,7 @@ function toRow(userId: string, task: Task): typeof tasks.$inferInsert {
   return {
     userId,
     id: task.id,
+    teamId: task.teamId ?? null,
     title: task.title,
     description: task.description,
     dueDate: task.dueDate,
@@ -76,6 +81,7 @@ function toRow(userId: string, task: Task): typeof tasks.$inferInsert {
 function toTask(row: TaskRow): Task {
   return {
     id: row.id,
+    ...(row.teamId ? { teamId: row.teamId } : {}),
     title: row.title,
     description: row.description,
     dueDate: row.dueDate,
@@ -97,12 +103,28 @@ async function ensureProfile(userId: string) {
   return db;
 }
 
-async function loadUserTasks(userId: string) {
+async function getTeamIds(userId: string) {
+  const db = getDb();
+  const memberships = await db
+    .select({ teamId: teamMembers.teamId })
+    .from(teamMembers)
+    .where(eq(teamMembers.userId, userId));
+  return memberships.map((membership) => membership.teamId);
+}
+
+function accessCondition(userId: string, teamIds: string[]): SQL {
+  const personal = and(eq(tasks.userId, userId), isNull(tasks.teamId))!;
+  return teamIds.length > 0
+    ? or(personal, inArray(tasks.teamId, teamIds))!
+    : personal;
+}
+
+async function loadAccessibleTasks(userId: string, teamIds: string[]) {
   const db = getDb();
   return db
     .select()
     .from(tasks)
-    .where(eq(tasks.userId, userId))
+    .where(accessCondition(userId, teamIds))
     .orderBy(asc(tasks.createdAt));
 }
 
@@ -125,14 +147,15 @@ export async function GET() {
 
   try {
     const db = await ensureProfile(userId);
-    const [profile, rows] = await Promise.all([
+    const [profile, teamIds] = await Promise.all([
       db
         .select({ initializedAt: orbitUsers.initializedAt })
         .from(orbitUsers)
         .where(eq(orbitUsers.userId, userId))
         .limit(1),
-      loadUserTasks(userId),
+      getTeamIds(userId),
     ]);
+    const rows = await loadAccessibleTasks(userId, teamIds);
 
     return Response.json({
       tasks: rows.map(toTask),
@@ -157,7 +180,10 @@ export async function POST(request: Request) {
       const imported = body.tasks.map(parseTask);
       if (imported.some((task) => !task)) return jsonError("Invalid task data.", 400);
 
-      const validTasks = imported as Task[];
+      const validTasks = (imported as Task[]).map((task) => ({
+        ...task,
+        teamId: undefined,
+      }));
       if (validTasks.length > 0) {
         await db
           .insert(tasks)
@@ -182,22 +208,28 @@ export async function POST(request: Request) {
         .set({ initializedAt: new Date().toISOString() })
         .where(eq(orbitUsers.userId, userId));
 
-      const rows = await loadUserTasks(userId);
+      const teamIds = await getTeamIds(userId);
+      const rows = await loadAccessibleTasks(userId, teamIds);
       return Response.json({ tasks: rows.map(toTask) });
     }
 
     const task = parseTask(body.task);
     if (!task) return jsonError("Invalid task data.", 400);
 
+    if (task.teamId) {
+      const teamIds = await getTeamIds(userId);
+      if (!teamIds.includes(task.teamId)) {
+        return jsonError("You are not a member of that team.", 403);
+      }
+    }
+
     const [row] = await db
       .insert(tasks)
       .values(toRow(userId, task))
-      .onConflictDoUpdate({
-        target: [tasks.userId, tasks.id],
-        set: taskUpdate(task),
-      })
+      .onConflictDoNothing()
       .returning();
 
+    if (!row) return jsonError("A task with that id already exists.", 409);
     return Response.json({ task: toTask(row) }, { status: 201 });
   } catch (error) {
     console.error("Unable to create tasks", error);
@@ -215,13 +247,20 @@ export async function PATCH(request: Request) {
     if (!task) return jsonError("Invalid task data.", 400);
 
     const db = getDb();
+    const teamIds = await getTeamIds(userId);
+    const [existing] = await db
+      .select()
+      .from(tasks)
+      .where(and(eq(tasks.id, task.id), accessCondition(userId, teamIds)))
+      .limit(1);
+
+    if (!existing) return jsonError("Task not found.", 404);
     const [row] = await db
       .update(tasks)
       .set(taskUpdate(task))
-      .where(and(eq(tasks.userId, userId), eq(tasks.id, task.id)))
+      .where(and(eq(tasks.userId, existing.userId), eq(tasks.id, existing.id)))
       .returning();
 
-    if (!row) return jsonError("Task not found.", 404);
     return Response.json({ task: toTask(row) });
   } catch (error) {
     console.error("Unable to update task", error);
@@ -238,12 +277,18 @@ export async function DELETE(request: Request) {
 
   try {
     const db = getDb();
-    const [deleted] = await db
-      .delete(tasks)
-      .where(and(eq(tasks.userId, userId), eq(tasks.id, id)))
-      .returning({ id: tasks.id });
+    const teamIds = await getTeamIds(userId);
+    const [existing] = await db
+      .select({ userId: tasks.userId, id: tasks.id })
+      .from(tasks)
+      .where(and(eq(tasks.id, id), accessCondition(userId, teamIds)))
+      .limit(1);
 
-    if (!deleted) return jsonError("Task not found.", 404);
+    if (!existing) return jsonError("Task not found.", 404);
+    await db
+      .delete(tasks)
+      .where(and(eq(tasks.userId, existing.userId), eq(tasks.id, existing.id)));
+
     return new Response(null, { status: 204 });
   } catch (error) {
     console.error("Unable to delete task", error);

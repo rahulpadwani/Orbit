@@ -5,9 +5,17 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BubbleField } from "./components/BubbleField";
 import { Dashboard } from "./components/Dashboard";
+import { OrbitalAssistant } from "./components/OrbitalAssistant";
+import { TeamSwitcher } from "./components/TeamSwitcher";
 import { TaskComposer } from "./components/TaskComposer";
 import { TaskDialog } from "./components/TaskDialog";
-import { Priority, Task, TaskFilter } from "./components/task-types";
+import {
+  Priority,
+  Task,
+  TaskFilter,
+  Team,
+  WorkspaceId,
+} from "./components/task-types";
 
 const STORAGE_KEY = "orbit-tasks-v1";
 const THEME_KEY = "orbit-theme";
@@ -18,6 +26,8 @@ type TaskListResponse = {
   tasks: Task[];
   needsMigration?: boolean;
 };
+
+type TeamListResponse = { teams: Team[] };
 
 function storedTasks(value: string | null): Task[] | null {
   if (value === null) return null;
@@ -97,6 +107,8 @@ function starterTasks(): Task[] {
 export default function TaskBoard() {
   const { user } = useUser();
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [workspace, setWorkspace] = useState<WorkspaceId>("all");
   const [filter, setFilter] = useState<TaskFilter>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [completingIds, setCompletingIds] = useState<Set<string>>(new Set());
@@ -105,6 +117,8 @@ export default function TaskBoard() {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("loading");
   const [toast, setToast] = useState("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const orbitPanelRef = useRef<HTMLElement>(null);
+  const [isPresenting, setIsPresenting] = useState(false);
   const userStorageKey = user ? `${STORAGE_KEY}:${user.id}` : null;
   const displayName =
     user?.firstName ?? user?.primaryEmailAddress?.emailAddress.split("@")[0] ?? "you";
@@ -136,7 +150,11 @@ export default function TaskBoard() {
       setTheme(nextTheme);
 
       try {
-        let result = await taskRequest<TaskListResponse>({ cache: "no-store" });
+        const [initialResult, teamResult] = await Promise.all([
+          taskRequest<TaskListResponse>({ cache: "no-store" }),
+          taskRequest<TeamListResponse>({ cache: "no-store" }, "/api/teams"),
+        ]);
+        let result = initialResult;
 
         if (result.needsMigration) {
           result = await taskRequest<TaskListResponse>({
@@ -147,6 +165,7 @@ export default function TaskBoard() {
 
         if (!cancelled) {
           setTasks(result.tasks);
+          setTeams(teamResult.teams);
           setSyncStatus("synced");
         }
       } catch {
@@ -182,17 +201,31 @@ export default function TaskBoard() {
     [],
   );
 
+  useEffect(() => {
+    function handleFullscreenChange() {
+      setIsPresenting(document.fullscreenElement === orbitPanelRef.current);
+    }
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
   const selectedTask = tasks.find((task) => task.id === selectedId) ?? null;
+
+  const workspaceTasks = useMemo(() => {
+    if (workspace === "all") return tasks;
+    if (workspace === "personal") return tasks.filter((task) => !task.teamId);
+    return tasks.filter((task) => task.teamId === workspace);
+  }, [tasks, workspace]);
 
   const visibleTasks = useMemo(() => {
     if (filter === "completed") {
-      return tasks.filter((task) => task.completed);
+      return workspaceTasks.filter((task) => task.completed);
     }
-    return tasks.filter(
+    return workspaceTasks.filter(
       (task) =>
         !task.completed && (filter === "all" || task.priority === filter),
     );
-  }, [filter, tasks]);
+  }, [filter, workspaceTasks]);
 
   const closeDialog = useCallback(() => setSelectedId(null), []);
 
@@ -216,6 +249,7 @@ export default function TaskBoard() {
       createdAt: new Date().toISOString(),
     };
     setTasks((current) => [...current, task]);
+    if (workspace !== "all") setWorkspace(task.teamId ?? "personal");
     setFilter("all");
     notify("A new task joined your orbit.");
     void taskRequest<{ task: Task }>({
@@ -344,13 +378,38 @@ export default function TaskBoard() {
     setFilter(nextFilter);
   }
 
+  function handleTeamCreated(team: Team) {
+    setTeams((current) => [...current, team]);
+    setWorkspace(team.id);
+  }
+
+  async function togglePresentation() {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await orbitPanelRef.current?.requestFullscreen();
+      }
+    } catch {
+      notify("Full-screen mode is not available in this browser.");
+    }
+  }
+
   const activeCount = tasks.filter((task) => !task.completed).length;
+  const orbitName =
+    workspace === "all"
+      ? "All workspaces"
+      : workspace === "personal"
+        ? "My space"
+        : teams.find((team) => team.id === workspace)?.name ?? "Team space";
   const filterTitle =
     filter === "all"
-      ? "Your task orbit"
+      ? `${orbitName} orbit`
       : filter === "completed"
-        ? "Completed constellation"
-        : `${capitalize(filter)}-priority orbit`;
+        ? `${orbitName} completed`
+        : `${orbitName} · ${capitalize(filter)} priority`;
+  const selectedTeam = teams.find((team) => team.id === selectedTask?.teamId);
+  const targetTeam = teams.find((team) => team.id === workspace);
 
   return (
     <main className="orbit-app">
@@ -380,7 +439,25 @@ export default function TaskBoard() {
             </span>
           </div>
 
-          <TaskComposer onAdd={addTask} />
+          <TeamSwitcher
+            teams={teams}
+            tasks={tasks}
+            workspace={workspace}
+            onWorkspaceChange={setWorkspace}
+            onTeamCreated={handleTeamCreated}
+            onNotify={notify}
+          />
+          <TaskComposer
+            key={workspace}
+            onAdd={addTask}
+            teams={teams}
+            defaultTeamId={targetTeam?.id}
+          />
+          <OrbitalAssistant
+            onAdd={addTask}
+            teamId={targetTeam?.id}
+            workspaceName={targetTeam?.name ?? "My space"}
+          />
           <Dashboard
             tasks={tasks}
             filter={filter}
@@ -392,14 +469,18 @@ export default function TaskBoard() {
               {syncStatus === "synced" ? "●" : syncStatus === "loading" ? "◌" : "!"}
             </span>
             {syncStatus === "synced"
-              ? `${displayName}'s tasks sync privately across devices.`
+              ? `${displayName}'s personal and shared tasks sync across devices.`
               : syncStatus === "loading"
                 ? "Connecting to your private task cloud…"
                 : "Cloud sync is unavailable. Reconnect before making changes."}
           </p>
         </aside>
 
-        <section className="orbit-panel" aria-labelledby="orbit-title">
+        <section
+          ref={orbitPanelRef}
+          className={`orbit-panel ${isPresenting ? "is-presenting" : ""}`}
+          aria-labelledby="orbit-title"
+        >
           <header className="orbit-header">
             <div>
               <div className="live-label">
@@ -414,11 +495,23 @@ export default function TaskBoard() {
               </p>
             </div>
             <div className="header-actions">
+              {isPresenting && <span className="presentation-label">Presentation mode</span>}
               <div className="priority-legend" aria-label="Bubble size legend">
                 <span><i className="legend-high" />High</span>
                 <span><i className="legend-medium" />Medium</span>
                 <span><i className="legend-low" />Low</span>
               </div>
+              <motion.button
+                className="presentation-button"
+                type="button"
+                onClick={togglePresentation}
+                whileTap={{ scale: 0.94 }}
+                aria-label={isPresenting ? "Exit full-screen presentation" : "Open full-screen presentation"}
+                title={isPresenting ? "Exit presentation" : "Present on a big screen"}
+              >
+                <span aria-hidden="true">{isPresenting ? "↙" : "⛶"}</span>
+                <span>{isPresenting ? "Exit" : "Present"}</span>
+              </motion.button>
               <motion.button
                 className="theme-button"
                 type="button"
@@ -463,6 +556,7 @@ export default function TaskBoard() {
             onSave={saveTask}
             onToggleComplete={toggleComplete}
             onDelete={deleteTask}
+            teamName={selectedTeam?.name}
           />
         )}
       </AnimatePresence>

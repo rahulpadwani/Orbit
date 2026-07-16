@@ -9,6 +9,10 @@ and low-priority tasks are smaller teal bubbles.
 - Add, edit, complete, restore, and delete tasks
 - Secure sign-up, sign-in, session management, and account profiles with Clerk
 - Private cloud task storage for each signed-in account with Neon Postgres
+- Multiple team workspaces with shared tasks and reusable 30-day invite links
+- Global dashboard totals across personal and joined team workspaces
+- Orbital voice commands for hands-free task creation, priority, and due dates
+- Full-screen presentation mode for office monitors and big screens
 - Automatic one-time import of existing browser tasks
 - Optional descriptions and due dates
 - Collision-aware floating bubble physics with Framer Motion transitions
@@ -70,13 +74,18 @@ publishes the production deployment.
 
 - `app/TaskBoard.tsx` owns optimistic task state, filtering, theme, and cloud sync.
 - `app/api/tasks/route.ts` provides authenticated task CRUD and account migration.
-- `db/schema.ts` defines the account-scoped Postgres tables.
+- `app/api/teams/route.ts` manages teams and owner-created invite links.
+- `app/api/teams/join/route.ts` securely joins signed-in users to teams.
+- `db/schema.ts` defines users, teams, memberships, invites, and shared tasks.
 - `app/components/TaskComposer.tsx` provides the accessible add-task form.
+- `app/components/TeamSwitcher.tsx` manages personal and team workspaces.
+- `app/components/OrbitalAssistant.tsx` turns supported browser speech into tasks.
 - `app/components/BubbleField.tsx` renders bubbles and runs the collision physics.
 - `app/components/TaskDialog.tsx` handles editing and task actions.
 - `app/components/Dashboard.tsx` renders summary counts and filters.
 - `app/globals.css` contains the responsive visual system and animations.
 
-Tasks are stored in Neon Postgres and every query is scoped to the authenticated
-Clerk user. The `orbit-tasks-v1` browser entry remains as a cache and migration
-source; theme preference stays device-local.
+Tasks are stored in Neon Postgres. Personal tasks are scoped to their owner;
+shared tasks are only returned to users with a matching team membership. The
+`orbit-tasks-v1` browser entry remains as a cache and migration source; theme
+preference stays device-local.

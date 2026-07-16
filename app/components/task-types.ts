@@ -4,6 +4,7 @@ export type TaskFilter = "all" | Priority | "completed";
 
 export type Task = {
   id: string;
+  teamId?: string;
   title: string;
   description: string;
   dueDate: string;
@@ -12,6 +13,16 @@ export type Task = {
   createdAt: string;
   completedAt?: string;
 };
+
+export type Team = {
+  id: string;
+  name: string;
+  role: "owner" | "member";
+  memberCount: number;
+  createdAt: string;
+};
+
+export type WorkspaceId = "all" | "personal" | string;
 
 export const PRIORITIES: Array<{
   value: Priority;
@@ -22,4 +33,3 @@ export const PRIORITIES: Array<{
   { value: "medium", label: "Medium", hint: "Keep moving" },
   { value: "low", label: "Low", hint: "Nice to do" },
 ];
-

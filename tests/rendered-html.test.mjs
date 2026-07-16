@@ -48,15 +48,20 @@ test("serves the Clerk authentication boundary", async () => {
 });
 
 test("keeps the requested product capabilities in the source", async () => {
-  const [board, gateway, page, proxy, api, schema, field, dialog, styles, packageJson] = await Promise.all([
+  const [board, gateway, page, proxy, api, teamsApi, joinApi, schema, field, dialog, orbital, switcher, joinPage, styles, packageJson] = await Promise.all([
     readFile(new URL("../app/TaskBoard.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/components/AuthGateway.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../proxy.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/api/tasks/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/teams/route.ts", import.meta.url), "utf8"),
+    readFile(new URL("../app/api/teams/join/route.ts", import.meta.url), "utf8"),
     readFile(new URL("../db/schema.ts", import.meta.url), "utf8"),
     readFile(new URL("../app/components/BubbleField.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/components/TaskDialog.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/OrbitalAssistant.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/components/TeamSwitcher.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/join/[token]/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
   ]);
@@ -66,6 +71,9 @@ test("keeps the requested product capabilities in the source", async () => {
   assert.match(board, /\/api\/tasks/);
   assert.match(board, /needsMigration/);
   assert.match(board, /completedAt/);
+  assert.match(board, /requestFullscreen/);
+  assert.match(board, /TeamSwitcher/);
+  assert.match(board, /OrbitalAssistant/);
   assert.match(gateway, /SignInButton/);
   assert.match(gateway, /SignUpButton/);
   assert.match(page, /when="signed-in"/);
@@ -73,14 +81,26 @@ test("keeps the requested product capabilities in the source", async () => {
   assert.match(proxy, /clerkMiddleware/);
   assert.match(api, /await auth\(\)/);
   assert.match(api, /eq\(tasks\.userId, userId\)/);
+  assert.match(api, /teamMembers/);
+  assert.match(teamsApi, /Only a team owner can create invite links/);
+  assert.match(joinApi, /onConflictDoNothing/);
   assert.match(schema, /primaryKey\(\{ columns: \[table\.userId, table\.id\] \}\)/);
   assert.match(schema, /initializedAt/);
+  assert.match(schema, /export const teams/);
+  assert.match(schema, /export const teamMembers/);
+  assert.match(schema, /export const teamInvites/);
   assert.match(field, /requestAnimationFrame/);
   assert.match(field, /distance < minimum/);
   assert.match(dialog, /role="dialog"/);
   assert.match(dialog, /Mark complete/);
+  assert.match(orbital, /SpeechRecognition/);
+  assert.match(orbital, /parseVoiceTask/);
+  assert.match(switcher, /Invite teammates/);
+  assert.match(switcher, /Create/);
+  assert.match(joinPage, /Team invitation/);
   assert.match(styles, /prefers-reduced-motion:\s*reduce/);
   assert.match(styles, /data-theme="dark"/);
+  assert.match(styles, /orbit-panel:fullscreen/);
   assert.match(packageJson, /"framer-motion"/);
   assert.match(packageJson, /"@clerk\/nextjs"/);
   assert.match(packageJson, /"@neondatabase\/serverless"/);

@@ -8,6 +8,13 @@
       "when": 1784218790548,
       "tag": "0000_mighty_brood",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1784228356684,
+      "tag": "0001_aromatic_frightful_four",
+      "breakpoints": true
     }
   ]
 }
