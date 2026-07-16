@@ -39,6 +39,19 @@ pnpm build
 pnpm test
 ```
 
+## Deploy to Vercel
+
+The included `vercel.json` uses the standard Next.js production build while
+the default scripts remain compatible with the existing Sites setup.
+
+```bash
+pnpm dlx vercel
+pnpm dlx vercel --prod
+```
+
+The first command links the local project to a Vercel account. The second
+publishes the production deployment.
+
 ## Project structure
 
 - `app/TaskBoard.tsx` owns task state, filtering, theme, and local persistence.

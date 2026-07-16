@@ -24,6 +24,11 @@ type Particle = {
   phase: number;
 };
 
+const INITIAL_SPEED = 1.85;
+const MAX_SPEED = 1.55;
+const MIN_SPEED = 0.28;
+const DRIFT_FORCE = 0.007;
+
 function hashString(value: string) {
   let hash = 0;
   for (let index = 0; index < value.length; index += 1) {
@@ -83,8 +88,14 @@ function useBubblePhysics(taskIds: string[]) {
               usableHeight,
               Math.max(0, (((seed >> 3) % 991) / 991) * usableHeight),
             ),
-            vx: (index % 2 ? -1 : 1) * (0.22 + (seed % 8) / 20),
-            vy: (index % 3 ? 1 : -1) * (0.18 + (seed % 7) / 22),
+            vx:
+              (index % 2 ? -1 : 1) *
+              (0.22 + (seed % 8) / 20) *
+              INITIAL_SPEED,
+            vy:
+              (index % 3 ? 1 : -1) *
+              (0.18 + (seed % 7) / 22) *
+              INITIAL_SPEED,
             radius,
             phase: (seed % 628) / 100,
           };
@@ -141,19 +152,21 @@ function useBubblePhysics(taskIds: string[]) {
         const maxY = Math.max(0, height - diameter);
 
         if (!reduceMotion) {
-          particle.vx += Math.sin(now / 1800 + particle.phase) * 0.0038;
-          particle.vy += Math.cos(now / 2100 + particle.phase) * 0.0032;
-          particle.vx *= 0.998;
-          particle.vy *= 0.998;
+          particle.vx +=
+            Math.sin(now / 1050 + particle.phase) * DRIFT_FORCE;
+          particle.vy +=
+            Math.cos(now / 1250 + particle.phase) * DRIFT_FORCE * 0.88;
+          particle.vx *= 0.999;
+          particle.vy *= 0.999;
 
           const speed = Math.hypot(particle.vx, particle.vy);
-          if (speed > 0.82) {
-            particle.vx = (particle.vx / speed) * 0.82;
-            particle.vy = (particle.vy / speed) * 0.82;
+          if (speed > MAX_SPEED) {
+            particle.vx = (particle.vx / speed) * MAX_SPEED;
+            particle.vy = (particle.vy / speed) * MAX_SPEED;
           }
-          if (speed < 0.12) {
-            particle.vx += Math.sin(particle.phase) * 0.015;
-            particle.vy += Math.cos(particle.phase) * 0.015;
+          if (speed < MIN_SPEED) {
+            particle.vx += Math.sin(particle.phase) * 0.035;
+            particle.vy += Math.cos(particle.phase) * 0.035;
           }
 
           particle.x += particle.vx * delta;
@@ -307,4 +320,3 @@ function formatFullDate(value: string) {
 function capitalize(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
-
