@@ -162,6 +162,7 @@ export function TaskDialog({
 
           <div className="task-meta">
             <span>{teamName ? `Shared in ${teamName}` : "Private task"}</span>
+            {teamName && <span>Created by {task.createdBy ?? "Orbit member"}</span>}
             <span>Created {formatDate(task.createdAt)}</span>
             {task.completedAt && (
               <span>Completed {formatDate(task.completedAt)}</span>

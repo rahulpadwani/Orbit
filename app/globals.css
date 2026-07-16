@@ -1292,6 +1292,30 @@ button {
   -webkit-line-clamp: 3;
 }
 
+.bubble-owner {
+  position: relative;
+  z-index: 1;
+  display: block;
+  max-width: 92%;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 8px;
+  font-weight: 760;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bubble-high .bubble-owner {
+  font-size: 9px;
+}
+
+.bubble-low .bubble-owner {
+  max-width: 84%;
+  font-size: 7px;
+}
+
 .bubble-due {
   position: relative;
   z-index: 1;

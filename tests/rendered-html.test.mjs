@@ -82,6 +82,8 @@ test("keeps the requested product capabilities in the source", async () => {
   assert.match(api, /await auth\(\)/);
   assert.match(api, /eq\(tasks\.userId, userId\)/);
   assert.match(api, /teamMembers/);
+  assert.match(api, /currentUser/);
+  assert.match(api, /tasksWithCreators/);
   assert.match(teamsApi, /Only a team owner can create invite links/);
   assert.match(joinApi, /onConflictDoNothing/);
   assert.match(schema, /primaryKey\(\{ columns: \[table\.userId, table\.id\] \}\)/);
@@ -89,10 +91,13 @@ test("keeps the requested product capabilities in the source", async () => {
   assert.match(schema, /export const teams/);
   assert.match(schema, /export const teamMembers/);
   assert.match(schema, /export const teamInvites/);
+  assert.match(schema, /displayName/);
   assert.match(field, /requestAnimationFrame/);
   assert.match(field, /distance < minimum/);
+  assert.match(field, /Created by/);
   assert.match(dialog, /role="dialog"/);
   assert.match(dialog, /Mark complete/);
+  assert.match(dialog, /Created by/);
   assert.match(orbital, /SpeechRecognition/);
   assert.match(orbital, /parseVoiceTask/);
   assert.match(switcher, /Invite teammates/);

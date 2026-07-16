@@ -1,0 +1,1 @@
+ALTER TABLE "orbit_users" ADD COLUMN "display_name" text DEFAULT 'Orbit member' NOT NULL;

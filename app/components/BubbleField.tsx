@@ -243,7 +243,7 @@ export function BubbleField({
               type="button"
               className={`task-bubble ${task.completed ? "is-completed" : ""} ${completingIds.has(task.id) ? "is-completing" : ""}`}
               onClick={() => onSelect(task)}
-              aria-label={`${task.title}, ${task.priority} priority${task.dueDate ? `, due ${formatFullDate(task.dueDate)}` : ""}${task.completed ? ", completed" : ""}. Open task details.`}
+              aria-label={`${task.title}, ${task.priority} priority${task.createdBy ? `, created by ${task.createdBy}` : ""}${task.dueDate ? `, due ${formatFullDate(task.dueDate)}` : ""}${task.completed ? ", completed" : ""}. Open task details.`}
             >
               <span className="bubble-glint" aria-hidden="true" />
               {task.completed && (
@@ -252,6 +252,9 @@ export function BubbleField({
                 </span>
               )}
               <span className="bubble-title">{task.title}</span>
+              {task.createdBy && (
+                <span className="bubble-owner">by {task.createdBy}</span>
+              )}
               {task.dueDate && task.priority !== "low" && (
                 <span className="bubble-due">{formatShortDate(task.dueDate)}</span>
               )}
@@ -265,6 +268,7 @@ export function BubbleField({
                   : `${capitalize(task.priority)} priority`}
                 {task.dueDate ? ` · Due ${formatShortDate(task.dueDate)}` : ""}
               </span>
+              {task.createdBy && <span>Created by {task.createdBy}</span>}
               {task.description && <small>{task.description}</small>}
             </span>
           </motion.div>

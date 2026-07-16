@@ -10,6 +10,7 @@ and low-priority tasks are smaller teal bubbles.
 - Secure sign-up, sign-in, session management, and account profiles with Clerk
 - Private cloud task storage for each signed-in account with Neon Postgres
 - Multiple team workspaces with shared tasks and reusable 30-day invite links
+- Authenticated creator names on every shared team bubble and task detail
 - Global dashboard totals across personal and joined team workspaces
 - Orbital voice commands for hands-free task creation, priority, and due dates
 - Full-screen presentation mode for office monitors and big screens

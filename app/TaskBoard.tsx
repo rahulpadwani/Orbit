@@ -244,6 +244,7 @@ export default function TaskBoard() {
         : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     const task: Task = {
       ...input,
+      ...(input.teamId ? { createdBy: displayName } : {}),
       id,
       completed: false,
       createdAt: new Date().toISOString(),

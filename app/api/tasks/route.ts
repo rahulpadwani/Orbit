@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { and, asc, eq, inArray, isNull, or, sql, type SQL } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { orbitUsers, teamMembers, tasks } from "../../../db/schema";
@@ -78,10 +78,11 @@ function toRow(userId: string, task: Task): typeof tasks.$inferInsert {
   };
 }
 
-function toTask(row: TaskRow): Task {
+function toTask(row: TaskRow, createdBy?: string): Task {
   return {
     id: row.id,
     ...(row.teamId ? { teamId: row.teamId } : {}),
+    ...(row.teamId ? { createdBy: createdBy ?? "Orbit member" } : {}),
     title: row.title,
     description: row.description,
     dueDate: row.dueDate,
@@ -99,8 +100,41 @@ async function requireUserId() {
 
 async function ensureProfile(userId: string) {
   const db = getDb();
-  await db.insert(orbitUsers).values({ userId }).onConflictDoNothing();
-  return db;
+  let displayName: string | undefined;
+
+  try {
+    const account = await currentUser();
+    const email = account?.emailAddresses.find(
+      (item) => item.id === account.primaryEmailAddressId,
+    )?.emailAddress;
+    displayName =
+      [account?.firstName, account?.lastName].filter(Boolean).join(" ").trim() ||
+      account?.username ||
+      email?.split("@")[0] ||
+      undefined;
+  } catch (error) {
+    console.error("Unable to refresh the Orbit display name", error);
+  }
+
+  if (displayName) {
+    await db
+      .insert(orbitUsers)
+      .values({ userId, displayName })
+      .onConflictDoUpdate({
+        target: orbitUsers.userId,
+        set: { displayName },
+      });
+  } else {
+    await db.insert(orbitUsers).values({ userId }).onConflictDoNothing();
+  }
+
+  const [profile] = await db
+    .select({ displayName: orbitUsers.displayName })
+    .from(orbitUsers)
+    .where(eq(orbitUsers.userId, userId))
+    .limit(1);
+
+  return { db, displayName: profile?.displayName ?? "Orbit member" };
 }
 
 async function getTeamIds(userId: string) {
@@ -128,6 +162,28 @@ async function loadAccessibleTasks(userId: string, teamIds: string[]) {
     .orderBy(asc(tasks.createdAt));
 }
 
+async function tasksWithCreators(
+  db: ReturnType<typeof getDb>,
+  rows: TaskRow[],
+) {
+  const creatorIds = [
+    ...new Set(
+      rows.filter((row) => row.teamId).map((row) => row.userId),
+    ),
+  ];
+  if (creatorIds.length === 0) return rows.map((row) => toTask(row));
+
+  const profiles = await db
+    .select({ userId: orbitUsers.userId, displayName: orbitUsers.displayName })
+    .from(orbitUsers)
+    .where(inArray(orbitUsers.userId, creatorIds));
+  const names = new Map(
+    profiles.map((profile) => [profile.userId, profile.displayName]),
+  );
+
+  return rows.map((row) => toTask(row, names.get(row.userId)));
+}
+
 function taskUpdate(task: Task) {
   return {
     title: task.title,
@@ -146,7 +202,7 @@ export async function GET() {
   if (!userId) return jsonError("Unauthorized", 401);
 
   try {
-    const db = await ensureProfile(userId);
+    const { db } = await ensureProfile(userId);
     const [profile, teamIds] = await Promise.all([
       db
         .select({ initializedAt: orbitUsers.initializedAt })
@@ -158,7 +214,7 @@ export async function GET() {
     const rows = await loadAccessibleTasks(userId, teamIds);
 
     return Response.json({
-      tasks: rows.map(toTask),
+      tasks: await tasksWithCreators(db, rows),
       needsMigration: !profile[0]?.initializedAt,
     });
   } catch (error) {
@@ -173,7 +229,7 @@ export async function POST(request: Request) {
 
   try {
     const body = (await request.json()) as { task?: unknown; tasks?: unknown; initialize?: unknown };
-    const db = await ensureProfile(userId);
+    const { db, displayName } = await ensureProfile(userId);
 
     if (Array.isArray(body.tasks) && body.initialize === true) {
       if (body.tasks.length > 250) return jsonError("Too many tasks to import.", 400);
@@ -210,7 +266,7 @@ export async function POST(request: Request) {
 
       const teamIds = await getTeamIds(userId);
       const rows = await loadAccessibleTasks(userId, teamIds);
-      return Response.json({ tasks: rows.map(toTask) });
+      return Response.json({ tasks: await tasksWithCreators(db, rows) });
     }
 
     const task = parseTask(body.task);
@@ -230,7 +286,10 @@ export async function POST(request: Request) {
       .returning();
 
     if (!row) return jsonError("A task with that id already exists.", 409);
-    return Response.json({ task: toTask(row) }, { status: 201 });
+    return Response.json(
+      { task: toTask(row, task.teamId ? displayName : undefined) },
+      { status: 201 },
+    );
   } catch (error) {
     console.error("Unable to create tasks", error);
     return jsonError("Task could not be saved.", 500);
@@ -261,7 +320,8 @@ export async function PATCH(request: Request) {
       .where(and(eq(tasks.userId, existing.userId), eq(tasks.id, existing.id)))
       .returning();
 
-    return Response.json({ task: toTask(row) });
+    const [updatedTask] = await tasksWithCreators(db, [row]);
+    return Response.json({ task: updatedTask });
   } catch (error) {
     console.error("Unable to update task", error);
     return jsonError("Task could not be updated.", 500);

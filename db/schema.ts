@@ -2,6 +2,7 @@ import { boolean, index, pgTable, primaryKey, text, timestamp } from "drizzle-or
 
 export const orbitUsers = pgTable("orbit_users", {
   userId: text("user_id").primaryKey(),
+  displayName: text("display_name").default("Orbit member").notNull(),
   initializedAt: timestamp("initialized_at", { withTimezone: true, mode: "string" }),
   createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
     .defaultNow()

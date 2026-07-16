@@ -5,6 +5,7 @@ export type TaskFilter = "all" | Priority | "completed";
 export type Task = {
   id: string;
   teamId?: string;
+  createdBy?: string;
   title: string;
   description: string;
   dueDate: string;
