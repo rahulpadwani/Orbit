@@ -1,0 +1,6 @@
+work/
+dist/
+.next/
+.wrangler/
+.pnpm-store/
+node_modules/
