@@ -103,6 +103,10 @@ test("keeps the requested product capabilities in the source", async () => {
   assert.match(dialog, /role="dialog"/);
   assert.match(dialog, /Mark complete/);
   assert.match(dialog, /Created by/);
+  assert.match(
+    dialog,
+    /function handleComplete\(\) \{\s*const editedTask = getEditedTask\(\);\s*onToggleComplete\(editedTask\);\s*\}/,
+  );
   assert.match(orbital, /SpeechRecognition/);
   assert.match(orbital, /parseVoiceTask/);
   assert.match(celebration, /Bubble burst!/);

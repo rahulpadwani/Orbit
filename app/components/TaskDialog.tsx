@@ -55,7 +55,6 @@ export function TaskDialog({
 
   function handleComplete() {
     const editedTask = getEditedTask();
-    onSave(editedTask);
     onToggleComplete(editedTask);
   }
 
