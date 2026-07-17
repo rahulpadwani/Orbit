@@ -1221,6 +1221,9 @@ button {
   transform: translateZ(0);
   transition: box-shadow 240ms ease, filter 240ms ease,
     opacity 240ms ease;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .bubble-high .task-bubble {
@@ -1263,6 +1266,38 @@ button {
   background: rgba(255, 255, 255, 0.32);
   filter: blur(5px);
   transform: rotate(-28deg);
+}
+
+@property --hold-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.hold-progress {
+  --hold-angle: 0deg;
+  position: absolute;
+  inset: 5px;
+  z-index: 4;
+  border-radius: 50%;
+  background: conic-gradient(
+    rgba(255, 255, 255, 0.98) var(--hold-angle),
+    rgba(255, 255, 255, 0.08) 0
+  );
+  opacity: 0;
+  pointer-events: none;
+  -webkit-mask: radial-gradient(circle, transparent 67%, #000 69%);
+  mask: radial-gradient(circle, transparent 67%, #000 69%);
+}
+
+.task-bubble.is-holding {
+  animation: bubble-charge 720ms cubic-bezier(0.3, 0.02, 0.2, 1) forwards;
+  filter: brightness(1.1) saturate(1.1);
+}
+
+.task-bubble.is-holding .hold-progress {
+  opacity: 1;
+  animation: hold-progress 720ms linear forwards;
 }
 
 .bubble-title {
@@ -1367,6 +1402,37 @@ button {
   pointer-events: none;
 }
 
+.bubble-fragments {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.bubble-fragments i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 11px;
+  height: 8px;
+  border-radius: 4px 8px 4px 7px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.62);
+  transform: translate(-50%, -50%) rotate(var(--fragment-angle)) translateY(-8px);
+  animation: bubble-fragment-burst 760ms cubic-bezier(0.1, 0.75, 0.2, 1) forwards;
+}
+
+.bubble-fragments i:nth-child(3n) {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.bubble-fragments i:nth-child(even) {
+  background: rgba(255, 225, 132, 0.96);
+}
+
 .task-bubble.is-completing {
   animation: completion-pop 760ms cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
 }
@@ -1456,6 +1522,13 @@ button {
   line-height: 1.35;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+.bubble-tooltip .tooltip-gesture {
+  margin-top: 3px;
+  color: var(--violet);
+  font-size: 8px;
+  font-weight: 820;
 }
 
 .field-hint {
@@ -1752,6 +1825,125 @@ button {
 .delete-button.confirm {
   color: var(--coral);
   text-decoration-color: currentColor;
+}
+
+.celebration-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 140;
+  overflow: hidden;
+  pointer-events: none;
+  isolation: isolate;
+}
+
+.celebration-flash {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.72), transparent 22%),
+    radial-gradient(circle at 50% 50%, rgba(126, 95, 238, 0.3), transparent 62%);
+  animation: celebration-flash 1.25s ease-out forwards;
+}
+
+.celebration-wave {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: -1;
+  width: min(72vw, 760px);
+  aspect-ratio: 1;
+  border: 4px solid rgba(255, 255, 255, 0.75);
+  border-radius: 50%;
+  box-shadow: 0 0 80px rgba(115, 88, 232, 0.2);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.1);
+  animation: celebration-wave 1.35s cubic-bezier(0.1, 0.7, 0.1, 1) forwards;
+}
+
+.celebration-wave.wave-two {
+  animation-delay: 120ms;
+}
+
+.celebration-confetti {
+  position: absolute;
+  inset: 0;
+}
+
+.celebration-confetti i {
+  position: absolute;
+  top: -8vh;
+  left: var(--confetti-x);
+  width: 9px;
+  height: 16px;
+  border-radius: 3px;
+  background: var(--confetti-color);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--confetti-color) 30%, transparent);
+  animation: confetti-fall 1.85s cubic-bezier(0.13, 0.62, 0.25, 1) var(--confetti-delay) forwards;
+}
+
+.celebration-confetti i:nth-child(3n) {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+}
+
+.celebration-confetti i:nth-child(4n) {
+  width: 15px;
+  height: 6px;
+  border-radius: 999px;
+}
+
+.celebration-copy-anchor {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.celebration-copy {
+  display: grid;
+  min-width: min(340px, calc(100vw - 36px));
+  justify-items: center;
+  gap: 5px;
+  padding: 22px 26px;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 26px;
+  background: color-mix(in srgb, var(--panel-solid) 78%, transparent);
+  box-shadow: 0 28px 90px rgba(42, 28, 75, 0.28);
+  color: var(--ink);
+  text-align: center;
+  backdrop-filter: blur(20px);
+}
+
+.celebration-copy > span {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #50d7ca, #1d9e94);
+  box-shadow: 0 12px 28px rgba(30, 159, 148, 0.28);
+  color: white;
+  font-size: 28px;
+  font-weight: 900;
+}
+
+.celebration-copy strong {
+  font-size: clamp(23px, 5vw, 32px);
+  font-weight: 880;
+  letter-spacing: -0.05em;
+}
+
+.celebration-copy small {
+  max-width: 280px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .toast-region {
@@ -2389,6 +2581,52 @@ button {
   100% { transform: translate(-50%, -55%) scale(1.15); opacity: 0; }
 }
 
+@keyframes hold-progress {
+  from { --hold-angle: 0deg; }
+  to { --hold-angle: 360deg; }
+}
+
+@keyframes bubble-charge {
+  0% { transform: scale(1); }
+  55% { transform: scale(0.94); }
+  100% { transform: scale(0.88); }
+}
+
+@keyframes bubble-fragment-burst {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(var(--fragment-angle)) translateY(-8px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--fragment-angle)) translateY(-108px) scale(0.2);
+  }
+}
+
+@keyframes celebration-flash {
+  0% { opacity: 0; }
+  18% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes celebration-wave {
+  0% { opacity: 0.9; transform: translate(-50%, -50%) scale(0.08); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.35); }
+}
+
+@keyframes confetti-fall {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, -4vh, 0) rotate(0deg) scale(0.8);
+  }
+  10% { opacity: 1; }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--confetti-drift), 116vh, 0)
+      rotate(var(--confetti-rotation)) scale(1.05);
+  }
+}
+
 @media (max-width: 1100px) {
   .app-grid {
     grid-template-columns: minmax(300px, 325px) minmax(0, 1fr);
@@ -2755,6 +2993,21 @@ button {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .celebration-confetti,
+  .celebration-wave,
+  .bubble-fragments {
+    display: none;
+  }
+
+  .task-bubble.is-holding {
+    animation: none;
+  }
+
+  .task-bubble.is-holding .hold-progress {
+    --hold-angle: 360deg;
+    animation: none;
+  }
+
   *,
   *::before,
   *::after {

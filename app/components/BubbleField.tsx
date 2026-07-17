@@ -5,7 +5,14 @@ import {
   motion,
   useReducedMotion,
 } from "framer-motion";
-import { useEffect, useMemo, useRef } from "react";
+import {
+  CSSProperties,
+  PointerEvent as ReactPointerEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Task, TaskFilter } from "./task-types";
 
 type BubbleFieldProps = {
@@ -13,6 +20,7 @@ type BubbleFieldProps = {
   filter: TaskFilter;
   completingIds: Set<string>;
   onSelect: (task: Task) => void;
+  onLongComplete: (task: Task) => void;
 };
 
 type Particle = {
@@ -214,6 +222,7 @@ export function BubbleField({
   filter,
   completingIds,
   onSelect,
+  onLongComplete,
 }: BubbleFieldProps) {
   const taskIds = useMemo(() => tasks.map((task) => task.id), [tasks]);
   const { fieldRef, registerNode } = useBubblePhysics(taskIds);
@@ -230,48 +239,14 @@ export function BubbleField({
 
       <AnimatePresence mode="popLayout">
         {tasks.map((task) => (
-          <motion.div
-            className={`bubble-shell bubble-${task.priority}`}
+          <FloatingTaskBubble
             key={task.id}
-            ref={(node) => registerNode(task.id, node)}
-            initial={{ opacity: 0, scale: 0.4 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.35 }}
-            transition={{ type: "spring", stiffness: 260, damping: 20 }}
-          >
-            <button
-              type="button"
-              className={`task-bubble ${task.completed ? "is-completed" : ""} ${completingIds.has(task.id) ? "is-completing" : ""}`}
-              onClick={() => onSelect(task)}
-              aria-label={`${task.title}, ${task.priority} priority${task.createdBy ? `, created by ${task.createdBy}` : ""}${task.dueDate ? `, due ${formatFullDate(task.dueDate)}` : ""}${task.completed ? ", completed" : ""}. Open task details.`}
-            >
-              <span className="bubble-glint" aria-hidden="true" />
-              {task.completed && (
-                <span className="bubble-check" aria-hidden="true">
-                  ✓
-                </span>
-              )}
-              <span className="bubble-title">{task.title}</span>
-              {task.createdBy && (
-                <span className="bubble-owner">by {task.createdBy}</span>
-              )}
-              {task.dueDate && task.priority !== "low" && (
-                <span className="bubble-due">{formatShortDate(task.dueDate)}</span>
-              )}
-              <span className="completion-ripple" aria-hidden="true" />
-            </button>
-            <span className="bubble-tooltip" role="tooltip">
-              <strong>{task.title}</strong>
-              <span>
-                {task.completed
-                  ? "Completed"
-                  : `${capitalize(task.priority)} priority`}
-                {task.dueDate ? ` · Due ${formatShortDate(task.dueDate)}` : ""}
-              </span>
-              {task.createdBy && <span>Created by {task.createdBy}</span>}
-              {task.description && <small>{task.description}</small>}
-            </span>
-          </motion.div>
+            task={task}
+            completing={completingIds.has(task.id)}
+            registerNode={registerNode}
+            onSelect={onSelect}
+            onLongComplete={onLongComplete}
+          />
         ))}
       </AnimatePresence>
 
@@ -299,10 +274,120 @@ export function BubbleField({
 
       {tasks.length > 0 && (
         <div className="field-hint" aria-hidden="true">
-          <span>↗</span> Tap a bubble to open it
+          <span>↗</span> Tap to open · hold to complete
         </div>
       )}
     </div>
+  );
+}
+
+const LONG_PRESS_MS = 720;
+
+function FloatingTaskBubble({
+  task,
+  completing,
+  registerNode,
+  onSelect,
+  onLongComplete,
+}: {
+  task: Task;
+  completing: boolean;
+  registerNode: (id: string, node: HTMLDivElement | null) => void;
+  onSelect: (task: Task) => void;
+  onLongComplete: (task: Task) => void;
+}) {
+  const [holding, setHolding] = useState(false);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressed = useRef(false);
+
+  useEffect(
+    () => () => {
+      if (holdTimer.current) clearTimeout(holdTimer.current);
+    },
+    [],
+  );
+
+  function cancelHold() {
+    if (holdTimer.current) clearTimeout(holdTimer.current);
+    holdTimer.current = null;
+    setHolding(false);
+  }
+
+  function beginHold(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (task.completed || completing) return;
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    longPressed.current = false;
+    setHolding(true);
+    holdTimer.current = setTimeout(() => {
+      holdTimer.current = null;
+      longPressed.current = true;
+      setHolding(false);
+      if ("vibrate" in navigator) navigator.vibrate([24, 32, 48]);
+      onLongComplete(task);
+    }, LONG_PRESS_MS);
+  }
+
+  function openTask() {
+    if (longPressed.current) {
+      longPressed.current = false;
+      return;
+    }
+    onSelect(task);
+  }
+
+  return (
+    <motion.div
+      className={`bubble-shell bubble-${task.priority}`}
+      ref={(node) => registerNode(task.id, node)}
+      initial={{ opacity: 0, scale: 0.4 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.35 }}
+      transition={{ type: "spring", stiffness: 260, damping: 20 }}
+    >
+      <button
+        type="button"
+        className={`task-bubble ${task.completed ? "is-completed" : ""} ${completing ? "is-completing" : ""} ${holding ? "is-holding" : ""}`}
+        onPointerDown={beginHold}
+        onPointerUp={cancelHold}
+        onPointerCancel={cancelHold}
+        onPointerLeave={cancelHold}
+        onContextMenu={(event) => event.preventDefault()}
+        onClick={openTask}
+        aria-label={`${task.title}, ${task.priority} priority${task.createdBy ? `, created by ${task.createdBy}` : ""}${task.dueDate ? `, due ${formatFullDate(task.dueDate)}` : ""}${task.completed ? ", completed" : ", hold to complete"}. Open task details.`}
+      >
+        <span className="bubble-glint" aria-hidden="true" />
+        <span className="hold-progress" aria-hidden="true" />
+        {task.completed && (
+          <span className="bubble-check" aria-hidden="true">✓</span>
+        )}
+        <span className="bubble-title">{task.title}</span>
+        {task.createdBy && <span className="bubble-owner">by {task.createdBy}</span>}
+        {task.dueDate && task.priority !== "low" && (
+          <span className="bubble-due">{formatShortDate(task.dueDate)}</span>
+        )}
+        <span className="completion-ripple" aria-hidden="true" />
+        {completing && (
+          <span className="bubble-fragments" aria-hidden="true">
+            {Array.from({ length: 10 }, (_, index) => (
+              <i
+                key={index}
+                style={{ "--fragment-angle": `${index * 36}deg` } as CSSProperties}
+              />
+            ))}
+          </span>
+        )}
+      </button>
+      <span className="bubble-tooltip" role="tooltip">
+        <strong>{task.title}</strong>
+        <span>
+          {task.completed ? "Completed" : `${capitalize(task.priority)} priority`}
+          {task.dueDate ? ` · Due ${formatShortDate(task.dueDate)}` : ""}
+        </span>
+        {task.createdBy && <span>Created by {task.createdBy}</span>}
+        {!task.completed && <span className="tooltip-gesture">Hold bubble to complete</span>}
+        {task.description && <small>{task.description}</small>}
+      </span>
+    </motion.div>
   );
 }
 

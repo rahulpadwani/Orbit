@@ -4,6 +4,7 @@ import { UserButton, useUser } from "@clerk/nextjs";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BubbleField } from "./components/BubbleField";
+import { CelebrationLayer } from "./components/CelebrationLayer";
 import { Dashboard } from "./components/Dashboard";
 import { OrbitalAssistant } from "./components/OrbitalAssistant";
 import { TeamSwitcher } from "./components/TeamSwitcher";
@@ -117,6 +118,8 @@ export default function TaskBoard() {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>("loading");
   const [toast, setToast] = useState("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const celebrationTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [celebration, setCelebration] = useState<{ key: number; title: string } | null>(null);
   const orbitPanelRef = useRef<HTMLElement>(null);
   const [isPresenting, setIsPresenting] = useState(false);
   const userStorageKey = user ? `${STORAGE_KEY}:${user.id}` : null;
@@ -197,6 +200,7 @@ export default function TaskBoard() {
   useEffect(
     () => () => {
       if (toastTimer.current) clearTimeout(toastTimer.current);
+      if (celebrationTimer.current) clearTimeout(celebrationTimer.current);
     },
     [],
   );
@@ -233,6 +237,12 @@ export default function TaskBoard() {
     setToast(message);
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(""), 2600);
+  }
+
+  function celebrate(title: string) {
+    if (celebrationTimer.current) clearTimeout(celebrationTimer.current);
+    setCelebration({ key: Date.now(), title });
+    celebrationTimer.current = setTimeout(() => setCelebration(null), 2100);
   }
 
   function addTask(
@@ -324,6 +334,7 @@ export default function TaskBoard() {
     }
 
     setSelectedId(null);
+    celebrate(task.title);
     setCompletingIds((current) => new Set(current).add(task.id));
     window.setTimeout(() => {
       const completedTask: Task = {
@@ -544,6 +555,7 @@ export default function TaskBoard() {
             filter={filter}
             completingIds={completingIds}
             onSelect={(task) => setSelectedId(task.id)}
+            onLongComplete={toggleComplete}
           />
         </section>
       </div>
@@ -559,6 +571,12 @@ export default function TaskBoard() {
             onDelete={deleteTask}
             teamName={selectedTeam?.name}
           />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {celebration && (
+          <CelebrationLayer key={celebration.key} title={celebration.title} />
         )}
       </AnimatePresence>
 

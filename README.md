@@ -17,6 +17,7 @@ and low-priority tasks are smaller teal bubbles.
 - Automatic one-time import of existing browser tasks
 - Optional descriptions and due dates
 - Collision-aware floating bubble physics with Framer Motion transitions
+- Long-press bubble completion with haptic feedback, a burst, and page-wide celebration
 - Filters for active priorities and completed tasks
 - Total, active, completed, and high-priority dashboard counts
 - Light and dark themes
