@@ -72,6 +72,15 @@ pnpm dlx vercel --prod
 The first command links the local project to a Vercel account. The second
 publishes the production deployment.
 
+## iPhone app
+
+The native Expo/React Native app lives in [`mobile`](./mobile). It uses the same
+Clerk accounts and authenticated `orbitspace.space` API as the website, so
+personal tasks, teams, and dashboard totals stay synchronized.
+
+See [`mobile/README.md`](./mobile/README.md) for local development, TestFlight,
+and App Store instructions.
+
 ## Project structure
 
 - `app/TaskBoard.tsx` owns optimistic task state, filtering, theme, and cloud sync.
@@ -86,6 +95,10 @@ publishes the production deployment.
 - `app/components/TaskDialog.tsx` handles editing and task actions.
 - `app/components/Dashboard.tsx` renders summary counts and filters.
 - `app/globals.css` contains the responsive visual system and animations.
+- `mobile/App.tsx` provides native Clerk authentication and the iPhone app shell.
+- `mobile/src/screens/OrbitHome.tsx` renders the native dashboard and task orbit.
+- `mobile/src/components/BubbleBoard.tsx` provides native animated bubbles,
+  long-press completion, and accessible interaction.
 
 Tasks are stored in Neon Postgres. Personal tasks are scoped to their owner;
 shared tasks are only returned to users with a matching team membership. The

@@ -1,0 +1,69 @@
+{
+  "expo": {
+    "name": "Orbit",
+    "slug": "orbit-mobile",
+    "version": "1.0.0",
+    "scheme": "orbit",
+    "orientation": "portrait",
+    "icon": "./assets/orbit-icon.png",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#f3f0f8",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "space.orbitspace.app",
+      "buildNumber": "1",
+      "usesAppleSignIn": true,
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Orbital listens only when you tap the microphone so it can create a task from your voice.",
+        "NSSpeechRecognitionUsageDescription": "Orbital converts your spoken task into text on your iPhone."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "@clerk/expo",
+      "expo-apple-authentication",
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true,
+          "faceIDPermission": "Allow Orbit to securely access your signed-in session."
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Allow Orbit to hear tasks you dictate to Orbital.",
+          "speechRecognitionPermission": "Allow Orbit to turn your spoken tasks into text."
+        }
+      ],
+      "@react-native-community/datetimepicker",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#2b176f",
+          "image": "./assets/orbit-icon.png",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#121019",
+            "image": "./assets/orbit-icon.png"
+          }
+        }
+      ]
+    ]
+  }
+}
